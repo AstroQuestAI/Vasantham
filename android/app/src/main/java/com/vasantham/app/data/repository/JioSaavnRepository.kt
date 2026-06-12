@@ -29,9 +29,10 @@ class JioSaavnRepository @Inject constructor() {
         val cacheKey = "${track.title}|${track.artist}"
         cache[cacheKey]?.let { return@withContext it }
 
-        val query = URLEncoder.encode("${track.title} ${track.artist}", "UTF-8")
+        // Include album in query for disambiguation; fetch top 5 so we can validate.
+        val query = URLEncoder.encode("${track.title} ${track.album}", "UTF-8")
         return@withContext try {
-            val conn = URL("https://saavn.dev/api/search/songs?query=$query&limit=1")
+            val conn = URL("https://saavn.dev/api/search/songs?query=$query&limit=5")
                 .openConnection() as HttpURLConnection
             conn.connectTimeout = 10_000
             conn.readTimeout = 10_000
@@ -54,8 +55,17 @@ class JioSaavnRepository @Inject constructor() {
                 ?.takeIf { it.size() > 0 }
                 ?: return@withContext fallback
 
+            // Find the best matching result: song name must contain the track title
+            // (case-insensitive) to avoid playing a completely wrong song.
+            val titleWords = track.title.lowercase().split(" ").filter { it.length > 2 }
+            val bestMatch = (0 until results.size()).map { results[it].asJsonObject }
+                .firstOrNull { result ->
+                    val resultName = result.get("name")?.asString?.lowercase() ?: ""
+                    titleWords.any { word -> resultName.contains(word) }
+                } ?: return@withContext fallback
+
             // Pick 320 kbps (last entry in downloadUrl array)
-            val url = results[0].asJsonObject
+            val url = bestMatch
                 .getAsJsonArray("downloadUrl")
                 ?.lastOrNull()
                 ?.asJsonObject
