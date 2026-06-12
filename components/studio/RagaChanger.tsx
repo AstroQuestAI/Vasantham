@@ -1,10 +1,11 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Music4, ArrowRight } from 'lucide-react';
+import { Music4, ArrowRight, Loader2, RefreshCw } from 'lucide-react';
 import { usePlayerStore } from '@/lib/store';
 import { ragas } from '@/lib/data/ragas';
 import { cn } from '@/lib/utils';
+import { useKeyDetection } from '@/lib/hooks/useKeyDetection';
 
 // Western chromatic notes
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -32,6 +33,15 @@ export function RagaChanger() {
   const [targetKey, setTargetKey] = useState<string | null>(null);
   const [targetRaga, setTargetRaga] = useState<typeof ragas[0] | null>(null);
   const [mode, setMode] = useState<'key' | 'raga'>('key');
+  const { result: detectedKey, detecting, redetect } = useKeyDetection();
+
+  // Auto-update source key when detection completes
+  useEffect(() => {
+    if (detectedKey) {
+      setSourceKey(detectedKey.key);
+      if (targetKey) applyTranspose(detectedKey.key, targetKey);
+    }
+  }, [detectedKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const currentShift = effects.pitch;
 
@@ -83,6 +93,32 @@ export function RagaChanger() {
           <h3 className="font-display text-lg font-bold text-white">Raga Transposer</h3>
           <p className="text-xs text-white/40">Shift the song to any key or raga</p>
         </div>
+      </div>
+
+      {/* Key detection status */}
+      <div className="flex items-center gap-2 mb-4 p-3 rounded-xl bg-white/5 border border-white/10">
+        {detecting ? (
+          <>
+            <Loader2 className="w-4 h-4 text-amber-400 animate-spin flex-shrink-0" />
+            <p className="text-xs text-white/60">Detecting key from audio…</p>
+          </>
+        ) : detectedKey ? (
+          <>
+            <div className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
+            <p className="text-xs text-white/60">
+              Detected: <span className="text-amber-400 font-bold font-mono">{detectedKey.key} {detectedKey.mode}</span>
+              <span className="text-white/30 ml-1">({detectedKey.confidence}% confidence)</span>
+            </p>
+            <button onClick={redetect} className="ml-auto text-white/30 hover:text-white transition-colors">
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="w-2 h-2 rounded-full bg-white/20 flex-shrink-0" />
+            <p className="text-xs text-white/40">Play a track to auto-detect its key</p>
+          </>
+        )}
       </div>
 
       {/* Source key */}
