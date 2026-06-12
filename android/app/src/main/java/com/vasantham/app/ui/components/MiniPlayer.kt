@@ -2,6 +2,7 @@ package com.vasantham.app.ui.components
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -39,7 +40,6 @@ fun MiniPlayer(
 ) {
     val progress = if (durationMs > 0) positionMs.toFloat() / durationMs else 0f
 
-    // Vinyl rotation
     val rotation = remember { Animatable(0f) }
     LaunchedEffect(isPlaying) {
         if (isPlaying) {
@@ -53,28 +53,52 @@ fun MiniPlayer(
     }
 
     Column(modifier = modifier) {
-        // Progress bar
-        LinearProgressIndicator(
-            progress = { progress },
-            modifier = Modifier.fillMaxWidth().height(2.dp),
-            color = VioletPrimary,
-            trackColor = Color.White.copy(alpha = 0.08f),
-        )
+        // Vivid tri-color progress bar
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(3.dp)
+                .background(BgSurface3),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(progress)
+                    .fillMaxHeight()
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(VioletPrimary, PinkSecondary, AmberLight)
+                        )
+                    )
+            )
+        }
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(BgSurface.copy(alpha = 0.95f))
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            BgSurface.copy(alpha = 0.97f),
+                            VioletDark.copy(alpha = 0.20f),
+                            BgSurface.copy(alpha = 0.97f),
+                        )
+                    )
+                )
                 .clickable { onClick() }
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+                .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // Spinning artwork
+            // Spinning vinyl artwork with gradient ring
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(46.dp)
                     .clip(CircleShape)
+                    .border(
+                        2.dp,
+                        Brush.linearGradient(listOf(VioletLight, PinkLight)),
+                        CircleShape,
+                    )
                     .background(BgSurface3),
             ) {
                 AsyncImage(
@@ -83,12 +107,11 @@ fun MiniPlayer(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize().rotate(rotation.value),
                 )
-                // Center dot
                 Box(
                     modifier = Modifier
-                        .size(10.dp)
+                        .size(11.dp)
                         .align(Alignment.Center)
-                        .background(BgSurface, CircleShape),
+                        .background(BgDeep, CircleShape),
                 )
             }
 
@@ -96,7 +119,7 @@ fun MiniPlayer(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = track.title,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
                     color = TextPrimary,
                     fontSize = 14.sp,
                     maxLines = 1,
@@ -116,14 +139,14 @@ fun MiniPlayer(
                     )
                     track.raga?.let { raga ->
                         Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = AmberAccent.copy(alpha = 0.18f),
+                            shape = RoundedCornerShape(5.dp),
+                            color = AmberAccent.copy(alpha = 0.22f),
                         ) {
                             Text(
                                 text = raga.replaceFirstChar { it.uppercase() },
-                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
                                 fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                fontWeight = FontWeight.Bold,
                                 color = AmberLight,
                             )
                         }
@@ -131,15 +154,14 @@ fun MiniPlayer(
                 }
             }
 
-            // Controls
             IconButton(onClick = onPrev) {
-                Icon(Icons.Default.SkipPrevious, null, tint = TextSecondary, modifier = Modifier.size(28.dp))
+                Icon(Icons.Default.SkipPrevious, null,
+                    tint = VioletLight, modifier = Modifier.size(28.dp))
             }
 
-            // Play / Pause button
             Box(
                 modifier = Modifier
-                    .size(42.dp)
+                    .size(44.dp)
                     .background(
                         Brush.linearGradient(listOf(VioletPrimary, PinkSecondary)),
                         CircleShape,
@@ -156,7 +178,8 @@ fun MiniPlayer(
             }
 
             IconButton(onClick = onNext) {
-                Icon(Icons.Default.SkipNext, null, tint = TextSecondary, modifier = Modifier.size(28.dp))
+                Icon(Icons.Default.SkipNext, null,
+                    tint = VioletLight, modifier = Modifier.size(28.dp))
             }
         }
     }

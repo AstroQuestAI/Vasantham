@@ -7,17 +7,25 @@ import androidx.compose.runtime.Composable
 private val DarkColorScheme = darkColorScheme(
     primary          = VioletPrimary,
     onPrimary        = TextPrimary,
-    primaryContainer = BgSurface2,
+    primaryContainer = VioletDark.copy(alpha = 0.3f),
+    onPrimaryContainer = VioletLight,
     secondary        = PinkSecondary,
     onSecondary      = TextPrimary,
-    tertiary         = AmberAccent,
+    secondaryContainer = PinkSecondary.copy(alpha = 0.2f),
+    tertiary         = AmberGold,
+    onTertiary       = BgDeep,
+    tertiaryContainer = AmberAccent.copy(alpha = 0.2f),
     background       = BgDeep,
     onBackground     = TextPrimary,
     surface          = BgSurface,
     onSurface        = TextPrimary,
     surfaceVariant   = BgSurface2,
     onSurfaceVariant = TextSecondary,
-    outline          = BorderSubtle,
+    outline          = BorderVivid,
+    outlineVariant   = BorderSubtle,
+    error            = CoralRed,
+    onError          = TextPrimary,
+    inversePrimary   = VioletLight,
 )
 
 @Composable

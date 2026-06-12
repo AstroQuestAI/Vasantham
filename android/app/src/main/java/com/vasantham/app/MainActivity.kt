@@ -19,9 +19,7 @@ import com.vasantham.app.ui.navigation.VasanthamNavGraph
 import com.vasantham.app.ui.navigation.bottomNavScreens
 import com.vasantham.app.ui.components.MiniPlayer
 import com.vasantham.app.ui.screens.NowPlayingScreen
-import com.vasantham.app.ui.theme.BgDeep
-import com.vasantham.app.ui.theme.BgSurface
-import com.vasantham.app.ui.theme.VasanthamTheme
+import com.vasantham.app.ui.theme.*
 import com.vasantham.app.viewmodel.PlayerViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -87,10 +85,11 @@ private fun VasanthamApp(viewModel: PlayerViewModel) {
                         tonalElevation = 0.dp,
                     ) {
                         bottomNavScreens.forEach { screen ->
+                            val selected = currentRoute == screen.route
                             NavigationBarItem(
-                                selected = currentRoute == screen.route,
+                                selected = selected,
                                 onClick = {
-                                    if (currentRoute != screen.route) {
+                                    if (!selected) {
                                         navController.navigate(screen.route) {
                                             popUpTo(Screen.Home.route) { saveState = true }
                                             launchSingleTop = true
@@ -98,14 +97,26 @@ private fun VasanthamApp(viewModel: PlayerViewModel) {
                                         }
                                     }
                                 },
-                                icon = { Icon(screen.icon, contentDescription = screen.label) },
-                                label = { Text(screen.label) },
+                                icon = {
+                                    Icon(
+                                        screen.icon,
+                                        contentDescription = screen.label,
+                                        modifier = androidx.compose.ui.Modifier.size(if (selected) 26.dp else 22.dp),
+                                    )
+                                },
+                                label = {
+                                    Text(
+                                        screen.label,
+                                        fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.Bold
+                                                     else androidx.compose.ui.text.font.FontWeight.Normal,
+                                    )
+                                },
                                 colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = androidx.compose.ui.graphics.Color(0xFF8B5CF6),
-                                    selectedTextColor = androidx.compose.ui.graphics.Color(0xFF8B5CF6),
-                                    unselectedIconColor = androidx.compose.ui.graphics.Color(0xFF6B7280),
-                                    unselectedTextColor = androidx.compose.ui.graphics.Color(0xFF6B7280),
-                                    indicatorColor = androidx.compose.ui.graphics.Color(0xFF8B5CF6).copy(alpha = 0.15f),
+                                    selectedIconColor = VioletLight,
+                                    selectedTextColor = VioletLight,
+                                    unselectedIconColor = TextMuted,
+                                    unselectedTextColor = TextMuted,
+                                    indicatorColor = VioletPrimary.copy(alpha = 0.22f),
                                 ),
                             )
                         }

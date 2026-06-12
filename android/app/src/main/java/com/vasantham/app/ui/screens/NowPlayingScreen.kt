@@ -2,6 +2,7 @@ package com.vasantham.app.ui.screens
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -19,6 +20,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -50,7 +52,6 @@ fun NowPlayingScreen(
     val progress = if (playerState.durationMs > 0)
         playerState.currentPositionMs.toFloat() / playerState.durationMs else 0f
 
-    // Vinyl rotation
     val rotation = remember { Animatable(0f) }
     LaunchedEffect(playerState.isPlaying) {
         if (playerState.isPlaying) {
@@ -63,250 +64,389 @@ fun NowPlayingScreen(
         }
     }
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
+            .background(
+                Brush.verticalGradient(
+                    0f to VioletDark.copy(alpha = 0.6f),
+                    0.35f to BgDeep,
+                    1f to BgDeep,
+                )
+            )
     ) {
-        // Top bar
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.Default.KeyboardArrowDown, null, tint = TextPrimary, modifier = Modifier.size(30.dp))
-            }
-            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Now Playing", color = TextMuted, fontSize = 12.sp)
-                Text(track.album, color = TextPrimary, fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            Spacer(Modifier.size(48.dp))
-        }
-
-        // Vinyl artwork
+        // Ambient background glow
         Box(
             modifier = Modifier
-                .size(280.dp)
-                .align(Alignment.CenterHorizontally)
-                .clip(CircleShape)
-                .background(BgSurface3),
-        ) {
-            AsyncImage(
-                model = track.coverUrl,
-                contentDescription = track.title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .rotate(rotation.value),
-            )
-            // Inner groove circles
-            Box(
-                modifier = Modifier
-                    .size(80.dp)
-                    .align(Alignment.Center)
-                    .background(BgDeep, CircleShape),
-            )
-            Box(
-                modifier = Modifier
-                    .size(18.dp)
-                    .align(Alignment.Center)
-                    .background(BgSurface3, CircleShape),
-            )
-        }
+                .size(320.dp)
+                .align(Alignment.TopCenter)
+                .offset(y = (-60).dp)
+                .background(
+                    Brush.radialGradient(
+                        listOf(
+                            VioletPrimary.copy(alpha = 0.25f),
+                            PinkSecondary.copy(alpha = 0.08f),
+                            Color.Transparent,
+                        )
+                    )
+                )
+        )
 
-        Spacer(Modifier.height(28.dp))
-
-        // Track info
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
         ) {
-            Text(
-                text = track.title,
-                fontWeight = FontWeight.Bold,
-                fontSize = 22.sp,
-                color = TextPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(track.artist, color = TextSecondary, fontSize = 15.sp)
-            Spacer(Modifier.height(8.dp))
-
-            // Raga badge
-            track.raga?.let { ragaName ->
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = AmberAccent.copy(alpha = 0.18f),
+            // Top bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 18.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(
+                            Color.White.copy(alpha = 0.08f),
+                            RoundedCornerShape(12.dp),
+                        )
+                        .clickable { onBack() },
+                    contentAlignment = Alignment.Center,
                 ) {
+                    Icon(Icons.Default.KeyboardArrowDown, null,
+                        tint = TextPrimary, modifier = Modifier.size(28.dp))
+                }
+                Column(modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Now Playing", color = TextMuted, fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium)
                     Text(
-                        text = ragaName.replaceFirstChar { it.uppercase() },
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = AmberLight,
+                        track.album,
+                        style = TextStyle(
+                            brush = Brush.linearGradient(listOf(VioletLight, PinkLight))
+                        ),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
-            }
-        }
-
-        Spacer(Modifier.height(24.dp))
-
-        // Progress
-        Column(modifier = Modifier.padding(horizontal = 28.dp)) {
-            Slider(
-                value = progress,
-                onValueChange = { frac ->
-                    onSeek((frac * playerState.durationMs).toLong())
-                },
-                colors = SliderDefaults.colors(
-                    thumbColor = VioletPrimary,
-                    activeTrackColor = VioletPrimary,
-                    inactiveTrackColor = BgSurface3,
-                ),
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(formatDuration(playerState.currentPositionMs), color = TextMuted, fontSize = 11.sp)
-                Text(formatDuration(playerState.durationMs), color = TextMuted, fontSize = 11.sp)
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        // Controls
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // Shuffle
-            IconButton(onClick = onToggleShuffle) {
-                Icon(
-                    Icons.Default.Shuffle, null,
-                    tint = if (playerState.isShuffled) VioletLight else TextSecondary,
-                    modifier = Modifier.size(26.dp),
-                )
+                Spacer(Modifier.size(40.dp))
             }
 
-            // Previous
-            IconButton(onClick = onPrev, modifier = Modifier.size(56.dp)) {
-                Icon(Icons.Default.SkipPrevious, null, tint = TextPrimary, modifier = Modifier.size(36.dp))
-            }
-
-            // Play/Pause
+            // Vinyl artwork
             Box(
                 modifier = Modifier
-                    .size(64.dp)
-                    .background(
-                        Brush.linearGradient(listOf(VioletPrimary, PinkSecondary)),
+                    .size(290.dp)
+                    .align(Alignment.CenterHorizontally)
+                    .border(
+                        3.dp,
+                        Brush.sweepGradient(
+                            listOf(VioletPrimary, PinkSecondary, AmberAccent, VioletPrimary)
+                        ),
                         CircleShape,
                     )
-                    .clickable { onPlayPause() },
-                contentAlignment = Alignment.Center,
+                    .clip(CircleShape)
+                    .background(BgSurface3),
             ) {
-                Icon(
-                    if (playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = if (playerState.isPlaying) "Pause" else "Play",
-                    tint = Color.White,
-                    modifier = Modifier.size(36.dp),
-                )
-            }
-
-            // Next
-            IconButton(onClick = onNext, modifier = Modifier.size(56.dp)) {
-                Icon(Icons.Default.SkipNext, null, tint = TextPrimary, modifier = Modifier.size(36.dp))
-            }
-
-            // Repeat
-            IconButton(onClick = onCycleRepeat) {
-                Icon(
-                    when (playerState.repeatMode) {
-                        Player.REPEAT_MODE_ONE -> Icons.Default.RepeatOne
-                        else -> Icons.Default.Repeat
-                    },
-                    null,
-                    tint = if (playerState.repeatMode != Player.REPEAT_MODE_OFF) VioletLight else TextSecondary,
-                    modifier = Modifier.size(26.dp),
-                )
-            }
-        }
-
-        Spacer(Modifier.height(28.dp))
-
-        // Raga info
-        if (raga != null) {
-            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                Text(
-                    "Raga Details",
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary,
-                    fontSize = 16.sp,
-                    modifier = Modifier.padding(bottom = 10.dp),
-                )
-                RagaInfoCard(raga = raga, expandedByDefault = false)
-            }
-            Spacer(Modifier.height(20.dp))
-        }
-
-        // Queue
-        if (playerState.queue.isNotEmpty()) {
-            Text(
-                "Queue (${playerState.queue.size})",
-                fontWeight = FontWeight.SemiBold,
-                color = TextPrimary,
-                fontSize = 16.sp,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-            )
-            playerState.queue.take(5).forEachIndexed { idx, t ->
-                Row(
+                AsyncImage(
+                    model = track.coverUrl,
+                    contentDescription = track.title,
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Text(
-                        "${playerState.queueIndex + idx + 1}",
-                        color = TextMuted,
-                        fontSize = 12.sp,
-                        modifier = Modifier.width(20.dp),
-                    )
-                    AsyncImage(
-                        model = t.coverUrl,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(RoundedCornerShape(8.dp)),
-                    )
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(t.title, color = TextPrimary, fontSize = 13.sp,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(t.artist, color = TextSecondary, fontSize = 11.sp)
+                        .fillMaxSize()
+                        .rotate(rotation.value),
+                )
+                // Groove rings
+                Box(
+                    modifier = Modifier
+                        .size(90.dp)
+                        .align(Alignment.Center)
+                        .background(BgDeep, CircleShape),
+                )
+                Box(
+                    modifier = Modifier
+                        .size(22.dp)
+                        .align(Alignment.Center)
+                        .background(
+                            Brush.radialGradient(
+                                listOf(VioletLight, VioletPrimary)
+                            ),
+                            CircleShape,
+                        ),
+                )
+            }
+
+            Spacer(Modifier.height(28.dp))
+
+            // Track info
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = track.title,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 24.sp,
+                    style = TextStyle(
+                        brush = Brush.linearGradient(listOf(TextPrimary, VioletLight))
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(track.artist, color = TextSecondary, fontSize = 16.sp)
+                Spacer(Modifier.height(10.dp))
+                track.raga?.let { ragaName ->
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = AmberAccent.copy(alpha = 0.20f),
+                    ) {
+                        Text(
+                            text = "🎼 ${ragaName.replaceFirstChar { it.uppercase() }}",
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AmberLight,
+                        )
                     }
-                    Text(formatDuration(t.duration), color = TextMuted, fontSize = 11.sp)
                 }
             }
-            if (playerState.queue.size > 5) {
-                Text(
-                    "+${playerState.queue.size - 5} more",
-                    color = TextMuted,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
-                )
-            }
-        }
 
-        Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(24.dp))
+
+            // Progress
+            Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+                // Custom colored track
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(5.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(BgSurface3)
+                        .clickable { /* tap to seek */ },
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(progress)
+                            .fillMaxHeight()
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(VioletPrimary, PinkSecondary, AmberLight)
+                                )
+                            )
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+                // Slider for drag-seeking
+                Slider(
+                    value = progress,
+                    onValueChange = { frac ->
+                        onSeek((frac * playerState.durationMs).toLong())
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = SliderDefaults.colors(
+                        thumbColor = AmberLight,
+                        activeTrackColor = Color.Transparent,
+                        inactiveTrackColor = Color.Transparent,
+                    ),
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(formatDuration(playerState.currentPositionMs),
+                        color = VioletLight, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    Text(formatDuration(playerState.durationMs),
+                        color = TextMuted, fontSize = 12.sp)
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Controls row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onToggleShuffle) {
+                    Icon(Icons.Default.Shuffle, null,
+                        tint = if (playerState.isShuffled) TealLight else TextMuted,
+                        modifier = Modifier.size(26.dp))
+                }
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .background(
+                            Color.White.copy(alpha = 0.08f),
+                            CircleShape,
+                        )
+                        .clickable { onPrev() },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Default.SkipPrevious, null,
+                        tint = TextPrimary, modifier = Modifier.size(32.dp))
+                }
+                Box(
+                    modifier = Modifier
+                        .size(68.dp)
+                        .background(
+                            Brush.linearGradient(listOf(VioletPrimary, PinkSecondary)),
+                            CircleShape,
+                        )
+                        .clickable { onPlayPause() },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        if (playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(38.dp),
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .background(
+                            Color.White.copy(alpha = 0.08f),
+                            CircleShape,
+                        )
+                        .clickable { onNext() },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Default.SkipNext, null,
+                        tint = TextPrimary, modifier = Modifier.size(32.dp))
+                }
+                IconButton(onClick = onCycleRepeat) {
+                    Icon(
+                        when (playerState.repeatMode) {
+                            Player.REPEAT_MODE_ONE -> Icons.Default.RepeatOne
+                            else -> Icons.Default.Repeat
+                        },
+                        null,
+                        tint = if (playerState.repeatMode != Player.REPEAT_MODE_OFF) PinkLight else TextMuted,
+                        modifier = Modifier.size(26.dp),
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(28.dp))
+
+            // Raga info card
+            if (raga != null) {
+                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(bottom = 10.dp),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(4.dp)
+                                .height(20.dp)
+                                .background(
+                                    Brush.verticalGradient(listOf(AmberLight, OrangeLight)),
+                                    RoundedCornerShape(2.dp),
+                                )
+                        )
+                        Text(
+                            "Raga Details",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 17.sp,
+                            style = TextStyle(
+                                brush = Brush.linearGradient(listOf(AmberLight, OrangeLight))
+                            ),
+                        )
+                    }
+                    RagaInfoCard(raga = raga, expandedByDefault = false)
+                }
+                Spacer(Modifier.height(20.dp))
+            }
+
+            // Queue preview
+            if (playerState.queue.isNotEmpty()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(4.dp)
+                            .height(20.dp)
+                            .background(
+                                Brush.verticalGradient(listOf(TealLight, VioletLight)),
+                                RoundedCornerShape(2.dp),
+                            )
+                    )
+                    Text(
+                        "Up Next",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 17.sp,
+                        style = TextStyle(
+                            brush = Brush.linearGradient(listOf(TealLight, VioletLight))
+                        ),
+                    )
+                }
+                playerState.queue.take(5).forEachIndexed { idx, t ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .background(
+                                    Brush.linearGradient(listOf(VioletPrimary, PinkSecondary)),
+                                    RoundedCornerShape(8.dp),
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                "${playerState.queueIndex + idx + 1}",
+                                color = Color.White,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                        AsyncImage(
+                            model = t.coverUrl,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(RoundedCornerShape(10.dp)),
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(t.title, color = TextPrimary, fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(t.artist, color = TextSecondary, fontSize = 11.sp)
+                        }
+                        Text(formatDuration(t.duration), color = TextMuted, fontSize = 11.sp)
+                    }
+                }
+                if (playerState.queue.size > 5) {
+                    Text(
+                        "+ ${playerState.queue.size - 5} more",
+                        color = VioletLight.copy(alpha = 0.7f),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(28.dp))
+        }
     }
 }
