@@ -1,9 +1,12 @@
 package com.vasantham.app.service
 
+import android.content.Context
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.vasantham.app.audio.StemSeparationProcessor
@@ -26,10 +29,26 @@ class MusicService : MediaSessionService() {
             .setUsage(C.USAGE_MEDIA)
             .build()
 
-        val renderersFactory = DefaultRenderersFactory(this)
-            .setAudioProcessors(arrayOf(stemProcessor))
+        // Override buildAudioSink to inject the DSP stem processor into the pipeline.
+        // DefaultRenderersFactory.buildAudioSink() is a protected factory method in Media3.
+        val renderersFactory = object : DefaultRenderersFactory(this) {
+            override fun buildAudioSink(
+                context: Context,
+                enableFloatOutput: Boolean,
+                enableAudioTrackPlaybackParams: Boolean,
+            ): AudioSink? {
+                return DefaultAudioSink.Builder(context)
+                    .setAudioProcessorChain(
+                        DefaultAudioSink.DefaultAudioProcessorChain(stemProcessor)
+                    )
+                    .setEnableFloatOutput(enableFloatOutput)
+                    .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+                    .build()
+            }
+        }
 
-        player = ExoPlayer.Builder(this, renderersFactory)
+        player = ExoPlayer.Builder(this)
+            .setRenderersFactory(renderersFactory)
             .setAudioAttributes(audioAttributes, /* handleAudioFocus= */ true)
             .setHandleAudioBecomingNoisy(true)
             .build()
