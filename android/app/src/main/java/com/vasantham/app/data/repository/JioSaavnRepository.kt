@@ -1,5 +1,6 @@
 package com.vasantham.app.data.repository
 
+import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.vasantham.app.data.model.Track
@@ -16,6 +17,8 @@ import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private const val TAG = "JioSaavn"
+
 @Singleton
 class JioSaavnRepository @Inject constructor() {
 
@@ -27,54 +30,75 @@ class JioSaavnRepository @Inject constructor() {
     suspend fun resolveUrl(track: Track): String = withContext(Dispatchers.IO) {
         val fallback = track.audioUrl ?: ""
         val cacheKey = "${track.title}|${track.artist}"
-        cache[cacheKey]?.let { return@withContext it }
+        cache[cacheKey]?.let {
+            Log.d(TAG, "CACHE HIT [${track.title}] => $it")
+            return@withContext it
+        }
 
-        // Include album in query for disambiguation; fetch top 5 so we can validate.
         val query = URLEncoder.encode("${track.title} ${track.album}", "UTF-8")
+        Log.d(TAG, "Searching: ${track.title} | ${track.album} | query=$query")
         return@withContext try {
-            val conn = URL("https://saavn.dev/api/search/songs?query=$query&limit=5")
+            val conn = URL("https://saavn.sumit.co/api/search/songs?query=$query&limit=5")
                 .openConnection() as HttpURLConnection
             conn.connectTimeout = 10_000
             conn.readTimeout = 10_000
             conn.setRequestProperty("User-Agent", "VasanthamApp/1.0")
             conn.setRequestProperty("Accept", "application/json")
 
-            if (conn.responseCode != 200) {
+            val code = conn.responseCode
+            Log.d(TAG, "HTTP $code for query=$query")
+            if (code != 200) {
                 conn.disconnect()
+                Log.w(TAG, "Non-200, falling back to: $fallback")
                 return@withContext fallback
             }
 
-            val root = gson.fromJson(
-                conn.inputStream.bufferedReader().readText(),
-                JsonObject::class.java
-            )
+            val body = conn.inputStream.bufferedReader().readText()
             conn.disconnect()
+            Log.d(TAG, "Response length: ${body.length}")
 
+            val root = gson.fromJson(body, JsonObject::class.java)
             val results = root.getAsJsonObject("data")
                 ?.getAsJsonArray("results")
                 ?.takeIf { it.size() > 0 }
-                ?: return@withContext fallback
+                ?: run {
+                    Log.w(TAG, "No results, falling back")
+                    return@withContext fallback
+                }
 
-            // Find the best matching result: song name must contain the track title
-            // (case-insensitive) to avoid playing a completely wrong song.
+            // Log all candidates
+            (0 until results.size()).forEach { i ->
+                val r = results[i].asJsonObject
+                Log.d(TAG, "  Candidate[$i]: ${r.get("name")?.asString} | ${r.getAsJsonObject("album")?.get("name")?.asString}")
+            }
+
             val titleWords = track.title.lowercase().split(" ").filter { it.length > 2 }
             val bestMatch = (0 until results.size()).map { results[it].asJsonObject }
                 .firstOrNull { result ->
                     val resultName = result.get("name")?.asString?.lowercase() ?: ""
                     titleWords.any { word -> resultName.contains(word) }
-                } ?: return@withContext fallback
+                } ?: run {
+                    Log.w(TAG, "No title match found for '${track.title}', falling back")
+                    return@withContext fallback
+                }
 
-            // Pick 320 kbps (last entry in downloadUrl array)
+            Log.d(TAG, "Best match: ${bestMatch.get("name")?.asString}")
+
             val url = bestMatch
                 .getAsJsonArray("downloadUrl")
                 ?.lastOrNull()
                 ?.asJsonObject
                 ?.get("url")?.asString
-                ?: return@withContext fallback
+                ?: run {
+                    Log.w(TAG, "No downloadUrl, falling back")
+                    return@withContext fallback
+                }
 
+            Log.d(TAG, "RESOLVED [${track.title}] => $url")
             cache[cacheKey] = url
             url
         } catch (e: Exception) {
+            Log.e(TAG, "Exception resolving ${track.title}: ${e.message}")
             fallback
         }
     }

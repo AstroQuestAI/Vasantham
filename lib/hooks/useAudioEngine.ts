@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useCallback } from 'react';
 import { usePlayerStore } from '@/lib/store';
+import { resolveJioSaavnUrl } from '@/lib/resolveJioSaavn';
 
 export function useAudioEngine() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -128,24 +129,30 @@ export function useAudioEngine() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Track changes
+  // Track changes — resolve real stream URL from JioSaavn, fall back to audioUrl
   useEffect(() => {
     if (!audioRef.current || !currentTrack) return;
     const audio = audioRef.current;
 
-    // Use a demo audio if no URL provided
-    const url = currentTrack.audioUrl ?? currentTrack.videoUrl ?? '';
-    if (url) {
-      audio.src = url;
-    }
-
-    if (isPlaying) {
-      if (!contextRef.current) buildChain();
-      else if (contextRef.current.state === 'suspended') {
-        contextRef.current.resume();
+    const load = async () => {
+      let url = currentTrack.audioUrl ?? currentTrack.videoUrl ?? '';
+      try {
+        const resolved = await resolveJioSaavnUrl(currentTrack.title, currentTrack.album ?? '');
+        if (resolved) url = resolved;
+      } catch {
+        // keep fallback
       }
-      audio.play().catch(() => {});
-    }
+      console.log('[JioSaavn]', currentTrack.title, '=>', url);
+      if (url) audio.src = url;
+
+      if (isPlaying) {
+        if (!contextRef.current) buildChain();
+        else if (contextRef.current.state === 'suspended') contextRef.current.resume();
+        audio.play().catch(() => {});
+      }
+    };
+
+    load();
   }, [currentTrack]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Play/pause
