@@ -2,14 +2,18 @@ package com.vasantham.app.service
 
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import com.vasantham.app.audio.StemSeparationProcessor
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class MusicService : MediaSessionService() {
+
+    @Inject lateinit var stemProcessor: StemSeparationProcessor
 
     private lateinit var player: ExoPlayer
     private lateinit var mediaSession: MediaSession
@@ -22,13 +26,15 @@ class MusicService : MediaSessionService() {
             .setUsage(C.USAGE_MEDIA)
             .build()
 
-        player = ExoPlayer.Builder(this)
+        val renderersFactory = DefaultRenderersFactory(this)
+            .setAudioProcessors(arrayOf(stemProcessor))
+
+        player = ExoPlayer.Builder(this, renderersFactory)
             .setAudioAttributes(audioAttributes, /* handleAudioFocus= */ true)
             .setHandleAudioBecomingNoisy(true)
             .build()
 
-        mediaSession = MediaSession.Builder(this, player)
-            .build()
+        mediaSession = MediaSession.Builder(this, player).build()
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession =

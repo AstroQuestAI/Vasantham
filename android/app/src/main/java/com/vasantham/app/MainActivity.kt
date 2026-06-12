@@ -149,6 +149,7 @@ private fun VasanthamApp(viewModel: PlayerViewModel) {
                         onSeek = viewModel::seekTo,
                         onToggleShuffle = viewModel::toggleShuffle,
                         onCycleRepeat = viewModel::cycleRepeat,
+                        onSetMode = viewModel::setAudioMode,
                         onBack = { showNowPlaying = false },
                     )
                 }

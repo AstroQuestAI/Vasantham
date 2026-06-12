@@ -10,6 +10,8 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
+import com.vasantham.app.audio.AudioMode
+import com.vasantham.app.audio.StemSeparationProcessor
 import com.vasantham.app.data.model.Track
 import com.vasantham.app.data.repository.MediaRepository
 import com.vasantham.app.data.sampleTracks
@@ -32,12 +34,14 @@ data class PlayerState(
     val isShuffled: Boolean = false,
     val repeatMode: Int = Player.REPEAT_MODE_OFF,
     val isConnected: Boolean = false,
+    val audioMode: AudioMode = AudioMode.NORMAL,
 )
 
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
     application: Application,
     private val repository: MediaRepository,
+    private val stemProcessor: StemSeparationProcessor,
 ) : AndroidViewModel(application) {
 
     private val _state = MutableStateFlow(PlayerState())
@@ -45,7 +49,6 @@ class PlayerViewModel @Inject constructor(
 
     private var controller: MediaController? = null
 
-    // Position ticker
     private val positionJob = viewModelScope.launch {
         while (true) {
             controller?.let { c ->
@@ -61,9 +64,7 @@ class PlayerViewModel @Inject constructor(
 
     private fun connectToService() {
         val ctx = getApplication<Application>()
-        val sessionToken = SessionToken(
-            ctx, ComponentName(ctx, MusicService::class.java)
-        )
+        val sessionToken = SessionToken(ctx, ComponentName(ctx, MusicService::class.java))
         val future = MediaController.Builder(ctx, sessionToken).buildAsync()
         future.addListener({
             controller = future.get().also { c ->
@@ -161,6 +162,11 @@ class PlayerViewModel @Inject constructor(
             .build()
         c.addMediaItem(item)
         _state.update { it.copy(queue = it.queue + track) }
+    }
+
+    fun setAudioMode(mode: AudioMode) {
+        stemProcessor.mode = mode
+        _state.update { it.copy(audioMode = mode) }
     }
 
     override fun onCleared() {

@@ -1,9 +1,15 @@
 package com.vasantham.app.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -27,10 +33,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.Player
 import coil.compose.AsyncImage
+import com.vasantham.app.audio.AudioMode
 import com.vasantham.app.data.formatDuration
 import com.vasantham.app.data.getRagaForTrack
-import com.vasantham.app.data.model.Raga
+import com.vasantham.app.ui.components.PianoKeyboard
 import com.vasantham.app.ui.components.RagaInfoCard
+import com.vasantham.app.ui.components.SwaraDisplay
 import com.vasantham.app.ui.theme.*
 import com.vasantham.app.viewmodel.PlayerState
 
@@ -43,6 +51,7 @@ fun NowPlayingScreen(
     onSeek: (Long) -> Unit,
     onToggleShuffle: () -> Unit,
     onCycleRepeat: () -> Unit,
+    onSetMode: (AudioMode) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -75,7 +84,7 @@ fun NowPlayingScreen(
                 )
             )
     ) {
-        // Ambient background glow
+        // Ambient glow
         Box(
             modifier = Modifier
                 .size(320.dp)
@@ -83,11 +92,7 @@ fun NowPlayingScreen(
                 .offset(y = (-60).dp)
                 .background(
                     Brush.radialGradient(
-                        listOf(
-                            VioletPrimary.copy(alpha = 0.25f),
-                            PinkSecondary.copy(alpha = 0.08f),
-                            Color.Transparent,
-                        )
+                        listOf(VioletPrimary.copy(alpha = 0.25f), PinkSecondary.copy(alpha = 0.08f), Color.Transparent)
                     )
                 )
         )
@@ -107,25 +112,20 @@ fun NowPlayingScreen(
                 Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .background(
-                            Color.White.copy(alpha = 0.08f),
-                            RoundedCornerShape(12.dp),
-                        )
+                        .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
                         .clickable { onBack() },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Default.KeyboardArrowDown, null,
-                        tint = TextPrimary, modifier = Modifier.size(28.dp))
+                    Icon(Icons.Default.KeyboardArrowDown, null, tint = TextPrimary, modifier = Modifier.size(28.dp))
                 }
-                Column(modifier = Modifier.weight(1f),
-                    horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Now Playing", color = TextMuted, fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium)
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text("Now Playing", color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                     Text(
                         track.album.orEmpty(),
-                        style = TextStyle(
-                            brush = Brush.linearGradient(listOf(VioletLight, PinkLight))
-                        ),
+                        style = TextStyle(brush = Brush.linearGradient(listOf(VioletLight, PinkLight))),
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
                         maxLines = 1,
@@ -135,18 +135,12 @@ fun NowPlayingScreen(
                 Spacer(Modifier.size(40.dp))
             }
 
-            // Vinyl artwork
+            // Vinyl
             Box(
                 modifier = Modifier
-                    .size(290.dp)
+                    .size(260.dp)
                     .align(Alignment.CenterHorizontally)
-                    .border(
-                        3.dp,
-                        Brush.sweepGradient(
-                            listOf(VioletPrimary, PinkSecondary, AmberAccent, VioletPrimary)
-                        ),
-                        CircleShape,
-                    )
+                    .border(3.dp, Brush.sweepGradient(listOf(VioletPrimary, PinkSecondary, AmberAccent, VioletPrimary)), CircleShape)
                     .clip(CircleShape)
                     .background(BgSurface3),
             ) {
@@ -154,61 +148,39 @@ fun NowPlayingScreen(
                     model = track.coverUrl,
                     contentDescription = track.title,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .rotate(rotation.value),
+                    modifier = Modifier.fillMaxSize().rotate(rotation.value),
                 )
-                // Groove rings
+                Box(Modifier.size(80.dp).align(Alignment.Center).background(BgDeep, CircleShape))
                 Box(
-                    modifier = Modifier
-                        .size(90.dp)
-                        .align(Alignment.Center)
-                        .background(BgDeep, CircleShape),
-                )
-                Box(
-                    modifier = Modifier
-                        .size(22.dp)
-                        .align(Alignment.Center)
-                        .background(
-                            Brush.radialGradient(
-                                listOf(VioletLight, VioletPrimary)
-                            ),
-                            CircleShape,
-                        ),
+                    Modifier.size(20.dp).align(Alignment.Center)
+                        .background(Brush.radialGradient(listOf(VioletLight, VioletPrimary)), CircleShape)
                 )
             }
 
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(24.dp))
 
             // Track info
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 28.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
                     text = track.title,
                     fontWeight = FontWeight.Black,
-                    fontSize = 24.sp,
-                    style = TextStyle(
-                        brush = Brush.linearGradient(listOf(TextPrimary, VioletLight))
-                    ),
+                    fontSize = 22.sp,
+                    style = TextStyle(brush = Brush.linearGradient(listOf(TextPrimary, VioletLight))),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Spacer(Modifier.height(4.dp))
-                Text(track.artist, color = TextSecondary, fontSize = 16.sp)
-                Spacer(Modifier.height(10.dp))
+                Text(track.artist, color = TextSecondary, fontSize = 15.sp)
+                Spacer(Modifier.height(8.dp))
                 track.raga?.let { ragaName ->
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = AmberAccent.copy(alpha = 0.20f),
-                    ) {
+                    Surface(shape = RoundedCornerShape(10.dp), color = AmberAccent.copy(alpha = 0.20f)) {
                         Text(
-                            text = "🎼 ${ragaName.replaceFirstChar { it.uppercase() }}",
+                            "🎼 ${ragaName.replaceFirstChar { it.uppercase() }}",
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp),
-                            fontSize = 13.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = AmberLight,
                         )
@@ -216,37 +188,27 @@ fun NowPlayingScreen(
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(20.dp))
 
-            // Progress
+            // Progress bar
             Column(modifier = Modifier.padding(horizontal = 24.dp)) {
-                // Custom colored track
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(5.dp)
                         .clip(RoundedCornerShape(3.dp))
-                        .background(BgSurface3)
-                        .clickable { /* tap to seek */ },
+                        .background(BgSurface3),
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth(progress)
                             .fillMaxHeight()
-                            .background(
-                                Brush.horizontalGradient(
-                                    listOf(VioletPrimary, PinkSecondary, AmberLight)
-                                )
-                            )
+                            .background(Brush.horizontalGradient(listOf(VioletPrimary, PinkSecondary, AmberLight)))
                     )
                 }
-                Spacer(Modifier.height(4.dp))
-                // Slider for drag-seeking
                 Slider(
                     value = progress,
-                    onValueChange = { frac ->
-                        onSeek((frac * playerState.durationMs).toLong())
-                    },
+                    onValueChange = { onSeek((it * playerState.durationMs).toLong()) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = SliderDefaults.colors(
                         thumbColor = AmberLight,
@@ -254,24 +216,17 @@ fun NowPlayingScreen(
                         inactiveTrackColor = Color.Transparent,
                     ),
                 )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(formatDuration(playerState.currentPositionMs),
-                        color = VioletLight, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                    Text(formatDuration(playerState.durationMs),
-                        color = TextMuted, fontSize = 12.sp)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(formatDuration(playerState.currentPositionMs), color = VioletLight, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    Text(formatDuration(playerState.durationMs), color = TextMuted, fontSize = 12.sp)
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(10.dp))
 
-            // Controls row
+            // Transport controls
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -282,24 +237,17 @@ fun NowPlayingScreen(
                 }
                 Box(
                     modifier = Modifier
-                        .size(52.dp)
-                        .background(
-                            Color.White.copy(alpha = 0.08f),
-                            CircleShape,
-                        )
+                        .size(50.dp)
+                        .background(Color.White.copy(alpha = 0.08f), CircleShape)
                         .clickable { onPrev() },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Default.SkipPrevious, null,
-                        tint = TextPrimary, modifier = Modifier.size(32.dp))
+                    Icon(Icons.Default.SkipPrevious, null, tint = TextPrimary, modifier = Modifier.size(30.dp))
                 }
                 Box(
                     modifier = Modifier
-                        .size(68.dp)
-                        .background(
-                            Brush.linearGradient(listOf(VioletPrimary, PinkSecondary)),
-                            CircleShape,
-                        )
+                        .size(66.dp)
+                        .background(Brush.linearGradient(listOf(VioletPrimary, PinkSecondary)), CircleShape)
                         .clickable { onPlayPause() },
                     contentAlignment = Alignment.Center,
                 ) {
@@ -307,21 +255,17 @@ fun NowPlayingScreen(
                         if (playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier.size(38.dp),
+                        modifier = Modifier.size(36.dp),
                     )
                 }
                 Box(
                     modifier = Modifier
-                        .size(52.dp)
-                        .background(
-                            Color.White.copy(alpha = 0.08f),
-                            CircleShape,
-                        )
+                        .size(50.dp)
+                        .background(Color.White.copy(alpha = 0.08f), CircleShape)
                         .clickable { onNext() },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Default.SkipNext, null,
-                        tint = TextPrimary, modifier = Modifier.size(32.dp))
+                    Icon(Icons.Default.SkipNext, null, tint = TextPrimary, modifier = Modifier.size(30.dp))
                 }
                 IconButton(onClick = onCycleRepeat) {
                     Icon(
@@ -336,9 +280,128 @@ fun NowPlayingScreen(
                 }
             }
 
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(20.dp))
 
-            // Raga info card
+            // ── Mode switcher ──────────────────────────────────────────
+            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(bottom = 10.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(3.dp)
+                            .height(14.dp)
+                            .background(
+                                Brush.verticalGradient(listOf(TealLight, VioletLight)),
+                                RoundedCornerShape(2.dp),
+                            )
+                    )
+                    Text(
+                        "Playback Mode",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        style = TextStyle(brush = Brush.linearGradient(listOf(TealLight, VioletLight))),
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    AudioMode.entries.forEach { mode ->
+                        ModeChip(
+                            mode = mode,
+                            selected = playerState.audioMode == mode,
+                            onClick = { onSetMode(mode) },
+                        )
+                    }
+                }
+
+                // DSP active indicator
+                if (playerState.audioMode.affectsAudio) {
+                    Spacer(Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(TealAccent.copy(alpha = 0.10f), RoundedCornerShape(10.dp))
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        DspPulseIndicator()
+                        Column {
+                            Text(
+                                "DSP active · ${playerState.audioMode.label}",
+                                color = TealLight,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text(
+                                when (playerState.audioMode) {
+                                    AudioMode.KARAOKE, AudioMode.INSTRUMENTAL ->
+                                        "Mid-side separation · centre channel removed · instruments isolated"
+                                    AudioMode.VOCAL ->
+                                        "Mid-side separation · side channels removed · vocals isolated"
+                                    else -> ""
+                                },
+                                color = TextMuted,
+                                fontSize = 9.sp,
+                                lineHeight = 12.sp,
+                            )
+                        }
+                    }
+                }
+
+                // ── Piano panel ────────────────────────────────────────
+                AnimatedVisibility(
+                    visible = playerState.audioMode == AudioMode.PIANO,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut(),
+                ) {
+                    Column(modifier = Modifier.padding(top = 16.dp)) {
+                        PianoKeyboard(
+                            raga = raga,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        if (raga == null) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                "No raga data for this track.\nThe keyboard shows all 12 notes.",
+                                color = TextMuted,
+                                fontSize = 11.sp,
+                                lineHeight = 15.sp,
+                            )
+                        }
+                    }
+                }
+
+                // ── Swara panel ───────────────────────────────────────
+                AnimatedVisibility(
+                    visible = playerState.audioMode == AudioMode.SWARA,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut(),
+                ) {
+                    Column(modifier = Modifier.padding(top = 16.dp)) {
+                        SwaraDisplay(
+                            raga = raga,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        if (raga == null) {
+                            Text(
+                                "No raga data for this track.",
+                                color = TextMuted,
+                                fontSize = 11.sp,
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            // ── Raga details card ────────────────────────────────────
             if (raga != null) {
                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                     Row(
@@ -359,9 +422,7 @@ fun NowPlayingScreen(
                             "Raga Details",
                             fontWeight = FontWeight.Bold,
                             fontSize = 17.sp,
-                            style = TextStyle(
-                                brush = Brush.linearGradient(listOf(AmberLight, OrangeLight))
-                            ),
+                            style = TextStyle(brush = Brush.linearGradient(listOf(AmberLight, OrangeLight))),
                         )
                     }
                     RagaInfoCard(raga = raga, expandedByDefault = false)
@@ -369,7 +430,7 @@ fun NowPlayingScreen(
                 Spacer(Modifier.height(20.dp))
             }
 
-            // Queue preview
+            // ── Up Next ───────────────────────────────────────────────
             if (playerState.queue.isNotEmpty()) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -389,16 +450,12 @@ fun NowPlayingScreen(
                         "Up Next",
                         fontWeight = FontWeight.Bold,
                         fontSize = 17.sp,
-                        style = TextStyle(
-                            brush = Brush.linearGradient(listOf(TealLight, VioletLight))
-                        ),
+                        style = TextStyle(brush = Brush.linearGradient(listOf(TealLight, VioletLight))),
                     )
                 }
                 playerState.queue.take(5).forEachIndexed { idx, t ->
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 6.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
@@ -411,25 +468,16 @@ fun NowPlayingScreen(
                                 ),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text(
-                                "${playerState.queueIndex + idx + 1}",
-                                color = Color.White,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                            )
+                            Text("${playerState.queueIndex + idx + 1}", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                         AsyncImage(
                             model = t.coverUrl,
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .size(42.dp)
-                                .clip(RoundedCornerShape(10.dp)),
+                            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)),
                         )
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(t.title, color = TextPrimary, fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(t.title, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(t.artist, color = TextSecondary, fontSize = 11.sp)
                         }
                         Text(formatDuration(t.duration), color = TextMuted, fontSize = 11.sp)
@@ -449,4 +497,60 @@ fun NowPlayingScreen(
             Spacer(Modifier.height(28.dp))
         }
     }
+}
+
+@Composable
+private fun ModeChip(mode: AudioMode, selected: Boolean, onClick: () -> Unit) {
+    val (bgModifier, textColor) = if (selected) {
+        val colors = when {
+            mode.affectsAudio -> listOf(TealAccent, TealLight.copy(alpha = 0.8f))
+            mode == AudioMode.PIANO -> listOf(AmberAccent, AmberLight.copy(alpha = 0.8f))
+            mode == AudioMode.SWARA -> listOf(VioletPrimary, VioletLight.copy(alpha = 0.8f))
+            else -> listOf(BgSurface3, BgSurface3)
+        }
+        Modifier.background(Brush.horizontalGradient(colors), RoundedCornerShape(20.dp)) to Color.White
+    } else {
+        Modifier
+            .background(BgSurface3, RoundedCornerShape(20.dp))
+            .border(
+                1.dp,
+                when {
+                    mode.affectsAudio -> TealLight.copy(alpha = 0.3f)
+                    mode == AudioMode.PIANO -> AmberLight.copy(alpha = 0.3f)
+                    mode == AudioMode.SWARA -> VioletLight.copy(alpha = 0.3f)
+                    else -> BorderVivid.copy(alpha = 0.3f)
+                },
+                RoundedCornerShape(20.dp),
+            ) to TextSecondary
+    }
+
+    Box(
+        modifier = Modifier
+            .clickable { onClick() }
+            .then(bgModifier)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+    ) {
+        Text(
+            "${mode.emoji} ${mode.label}",
+            color = textColor,
+            fontSize = 12.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+        )
+    }
+}
+
+@Composable
+private fun DspPulseIndicator() {
+    val infiniteTransition = rememberInfiniteTransition(label = "dsp")
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse),
+        label = "scale",
+    )
+    Box(
+        modifier = Modifier
+            .size(10.dp)
+            .background(TealLight.copy(alpha = scale), CircleShape)
+    )
 }
