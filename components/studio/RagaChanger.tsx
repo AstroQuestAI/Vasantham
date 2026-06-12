@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Music4, Info } from 'lucide-react';
 import { usePlayerStore } from '@/lib/store';
 import { ragas } from '@/lib/data/ragas';
+import { RagaInfoCard } from '@/components/player/RagaInfoCard';
 import { cn } from '@/lib/utils';
 
 const timeColors: Record<string, string> = {
@@ -52,45 +53,20 @@ export function RagaChanger() {
         </p>
       </div>
 
-      {/* Selected raga details */}
+      {/* Selected raga — use the rich card */}
       {selected && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-4 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-600/10 border border-amber-500/30 mb-5"
+          className="mb-5"
         >
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h4 className="font-display font-bold text-amber-300 text-base">{selected.name}</h4>
-              {selected.carnaticName && selected.carnaticName !== selected.name && (
-                <p className="text-xs text-amber-400/60">(Carnatic: {selected.carnaticName})</p>
-              )}
-              <p className="text-xs text-white/60 mt-1">{selected.description}</p>
-            </div>
-            <button onClick={() => applyRaga(null)} className="text-xs text-white/40 hover:text-white px-2 py-1 rounded-lg hover:bg-white/10 transition-colors flex-shrink-0">
-              Remove
+          <div className="flex justify-end mb-2">
+            <button onClick={() => applyRaga(null)}
+              className="text-xs text-white/40 hover:text-white px-2 py-1 rounded-lg hover:bg-white/10 transition-colors">
+              Remove raga
             </button>
           </div>
-          <div className="mt-3 space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-white/40 w-16">Aroha:</span>
-              <code className="text-xs text-amber-300 font-mono">{selected.arohana}</code>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-white/40 w-16">Avaroha:</span>
-              <code className="text-xs text-amber-300 font-mono">{selected.avarohana}</code>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-white/40 w-16">Mood:</span>
-              <span className="text-xs text-white/60">{selected.mood}</span>
-            </div>
-            {selected.timeOfDay && (
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-white/40 w-16">Time:</span>
-                <span className="text-xs text-white/60">{selected.timeOfDay}</span>
-              </div>
-            )}
-          </div>
+          <RagaInfoCard raga={selected} compact={false} />
         </motion.div>
       )}
 

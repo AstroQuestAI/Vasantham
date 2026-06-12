@@ -9,6 +9,8 @@ import Link from 'next/link';
 import { usePlayerStore } from '@/lib/store';
 import { useAudioContext } from '@/components/AudioProvider';
 import { AudioVisualizer } from './AudioVisualizer';
+import { RagaInfoCard } from './RagaInfoCard';
+import { getRagaByTrack } from '@/lib/data/ragas';
 import { formatTime, cn } from '@/lib/utils';
 
 interface Props {
@@ -27,6 +29,7 @@ export function FullPlayer({ onClose }: Props) {
   if (!currentTrack) return null;
   const fav = isFavorite(currentTrack.id);
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const ragaInfo = currentTrack.raga ? getRagaByTrack(currentTrack.raga) : null;
 
   return (
     <motion.div
@@ -78,15 +81,27 @@ export function FullPlayer({ onClose }: Props) {
         </motion.div>
 
         {/* Track info */}
-        <div className="text-center mb-6">
+        <div className="text-center mb-4">
           <h2 className="font-display text-2xl font-bold text-white mb-1 leading-tight">{currentTrack.title}</h2>
           <p className="text-white/60 text-sm">{currentTrack.artist}</p>
-          {currentTrack.raga && (
-            <span className="inline-flex mt-2 px-2 py-0.5 rounded-full bg-primary/20 border border-primary/30 text-xs text-primary-400">
-              Raga: {currentTrack.raga}
-            </span>
+          {currentTrack.album && (
+            <p className="text-white/35 text-xs mt-0.5">{currentTrack.album} · {currentTrack.year}</p>
           )}
         </div>
+
+        {/* Raga info card */}
+        {ragaInfo && (
+          <div className="w-full max-w-sm mb-4">
+            <RagaInfoCard raga={ragaInfo} compact />
+          </div>
+        )}
+        {currentTrack.raga && !ragaInfo && (
+          <div className="mb-4">
+            <span className="inline-flex px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-xs text-amber-400">
+              Raga: {currentTrack.raga}
+            </span>
+          </div>
+        )}
 
         {/* Visualizer */}
         <div className="w-full max-w-sm mb-6">
@@ -164,9 +179,16 @@ export function FullPlayer({ onClose }: Props) {
         </div>
       </div>
 
-      {/* Right panel — queue */}
+      {/* Right panel — raga info + queue */}
       <div className="hidden md:flex flex-col w-80 glass border-l border-white/5 overflow-y-auto">
-        <div className="p-6 border-b border-white/5">
+        {/* Raga info at the top of the right panel */}
+        {ragaInfo && (
+          <div className="p-4 border-b border-white/5">
+            <RagaInfoCard raga={ragaInfo} compact={false} />
+          </div>
+        )}
+
+        <div className="p-4 border-b border-white/5">
           <h3 className="font-display font-semibold text-white flex items-center gap-2">
             <ListMusic className="w-5 h-5 text-primary" />
             Up Next

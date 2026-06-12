@@ -125,10 +125,76 @@ export const ragas: Raga[] = [
     semitones: [0, 2, 4, 5, 7, 9, 11],
     description: 'A morning raga of purity and joy, often used to start concerts.',
   },
+  {
+    id: 'hamsadhwani',
+    name: 'Hamsadhwani',
+    carnaticName: 'Hamsadhwani',
+    arohana: 'S R G P N S',
+    avarohana: 'S N P G R S',
+    mood: 'Auspicious, Joyful',
+    timeOfDay: 'Evening',
+    season: 'All seasons',
+    semitones: [0, 2, 4, 7, 11],
+    description:
+      'A pentatonic raga of auspiciousness and celebration, widely used in concerts and devotional music. Its five notes create a luminous, uplifting quality.',
+  },
+  {
+    id: 'abheri',
+    name: 'Abheri',
+    carnaticName: 'Abheri',
+    hindustaniName: 'Bhimpalasi',
+    arohana: 'S G M D N S',
+    avarohana: 'S N D M G R S',
+    mood: 'Melancholic, Devotional',
+    timeOfDay: 'Afternoon',
+    season: 'All seasons',
+    semitones: [0, 3, 5, 9, 11],
+    description:
+      'A raga of deep devotional sentiment and gentle melancholy, closely associated with compositions on Lord Murugan and Ganesha in Carnatic music.',
+  },
+  {
+    id: 'mohanam',
+    name: 'Mohanam',
+    carnaticName: 'Mohanam',
+    hindustaniName: 'Bhoopali',
+    arohana: 'S R G P D S',
+    avarohana: 'S D P G R S',
+    mood: 'Joyful, Romantic',
+    timeOfDay: 'Evening',
+    season: 'Spring',
+    semitones: [0, 2, 4, 7, 9],
+    description:
+      'One of the most beloved pentatonic ragas, conveying joy, charm, and romance. Widely used in both classical concerts and film music.',
+  },
+  {
+    id: 'kalyani',
+    name: 'Kalyani',
+    carnaticName: 'Kalyani',
+    hindustaniName: 'Yaman',
+    arohana: 'S R G M(#) P D N S',
+    avarohana: 'S N D P M(#) G R S',
+    mood: 'Serene, Romantic, Auspicious',
+    timeOfDay: 'Evening',
+    season: 'Spring',
+    semitones: [0, 2, 4, 6, 7, 9, 11],
+    description:
+      'The queen of all ragas in Carnatic music — Kalyani (Yaman in Hindustani) is a complete, seven-note raga of immense beauty and versatility.',
+  },
 ];
 
 export const getRagaById = (id: string): Raga | undefined =>
   ragas.find((r) => r.id === id);
+
+export const getRagaByTrack = (raga: string): Raga | undefined => {
+  const q = raga.toLowerCase().trim();
+  return ragas.find(
+    (r) =>
+      r.id === q ||
+      r.name.toLowerCase() === q ||
+      r.carnaticName?.toLowerCase() === q ||
+      r.hindustaniName?.toLowerCase() === q
+  );
+};
 
 export const ragaCategories = {
   morning: ragas.filter((r) => r.timeOfDay?.includes('Morning')),

@@ -9,6 +9,8 @@ import { usePlayerStore } from '@/lib/store';
 import { useAudioContext } from '@/components/AudioProvider';
 import { formatTime, cn } from '@/lib/utils';
 import { FullPlayer } from '@/components/player/FullPlayer';
+import { RagaInfoCard } from '@/components/player/RagaInfoCard';
+import { getRagaByTrack } from '@/lib/data/ragas';
 
 export function MiniPlayer() {
   const {
@@ -24,6 +26,7 @@ export function MiniPlayer() {
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
   const fav = isFavorite(currentTrack.id);
+  const ragaInfo = currentTrack.raga ? getRagaByTrack(currentTrack.raga) : null;
 
   return (
     <>
@@ -75,7 +78,14 @@ export function MiniPlayer() {
               <p className="text-sm font-semibold text-white truncate group-hover:text-primary-400 transition-colors">
                 {currentTrack.title}
               </p>
-              <p className="text-xs text-white/50 truncate">{currentTrack.artist}</p>
+              <div className="flex items-center gap-2 min-w-0">
+                <p className="text-xs text-white/50 truncate">{currentTrack.artist}</p>
+                {currentTrack.raga && (
+                  <span className="flex-shrink-0 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-[10px] font-medium text-amber-400">
+                    {ragaInfo?.name ?? currentTrack.raga}
+                  </span>
+                )}
+              </div>
             </div>
             <ChevronUp className="w-4 h-4 text-white/40 flex-shrink-0 ml-1 group-hover:text-white/70 transition-colors" />
           </button>

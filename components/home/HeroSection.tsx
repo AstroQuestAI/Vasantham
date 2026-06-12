@@ -4,13 +4,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, ChevronRight, Sparkles } from 'lucide-react';
 import { usePlayerStore } from '@/lib/store';
 import { featuredTracks } from '@/lib/data/sampleMedia';
+import { getRagaByTrack } from '@/lib/data/ragas';
 import { AudioVisualizer } from '@/components/player/AudioVisualizer';
+import { RagaInfoCard } from '@/components/player/RagaInfoCard';
 import { formatTime } from '@/lib/utils';
 
 export function HeroSection() {
   const [featureIdx, setFeatureIdx] = useState(0);
+  const [showRagaInfo, setShowRagaInfo] = useState(false);
   const { play, togglePlay, isPlaying, currentTrack } = usePlayerStore();
   const featured = featuredTracks[featureIdx];
+  const featuredRaga = featured.raga ? getRagaByTrack(featured.raga) : null;
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -94,7 +98,12 @@ export function HeroSection() {
                 {featured.raga && (
                   <>
                     <span className="w-1 h-1 rounded-full bg-white/30" />
-                    <span className="text-xs text-amber-400">Raga {featured.raga}</span>
+                    <button
+                      onClick={() => setShowRagaInfo((v) => !v)}
+                      className="text-xs text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-1 underline-offset-2 hover:underline"
+                    >
+                      Raga {featuredRaga?.name ?? featured.raga}
+                    </button>
                   </>
                 )}
               </div>
@@ -107,8 +116,22 @@ export function HeroSection() {
                 <p className="text-white/40 text-sm mb-4">{featured.album} · {featured.year}</p>
               )}
 
+              {/* Raga info card — expandable */}
+              <AnimatePresence>
+                {showRagaInfo && featuredRaga && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mb-4 overflow-hidden max-w-sm"
+                  >
+                    <RagaInfoCard raga={featuredRaga} compact={false} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {/* Visualizer for current track */}
-              {isThisPlaying && (
+              {isThisPlaying && !showRagaInfo && (
                 <div className="mb-4 w-48">
                   <AudioVisualizer mode="bars" height={32} />
                 </div>
