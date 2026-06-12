@@ -30,6 +30,7 @@ import com.vasantham.app.ui.theme.*
 fun MiniPlayer(
     track: Track,
     isPlaying: Boolean,
+    isLoading: Boolean = false,
     positionMs: Long,
     durationMs: Long,
     onPlayPause: () -> Unit,
@@ -166,15 +167,23 @@ fun MiniPlayer(
                         Brush.linearGradient(listOf(VioletPrimary, PinkSecondary)),
                         CircleShape,
                     )
-                    .clickable { onPlayPause() },
+                    .clickable(enabled = !isLoading) { onPlayPause() },
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = if (isPlaying) "Pause" else "Play",
-                    tint = Color.White,
-                    modifier = Modifier.size(26.dp),
-                )
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp,
+                    )
+                } else {
+                    Icon(
+                        if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (isPlaying) "Pause" else "Play",
+                        tint = Color.White,
+                        modifier = Modifier.size(26.dp),
+                    )
+                }
             }
 
             IconButton(onClick = onNext) {

@@ -68,6 +68,7 @@ private fun VasanthamApp(viewModel: PlayerViewModel) {
                             MiniPlayer(
                                 track = track,
                                 isPlaying = playerState.isPlaying,
+                                isLoading = playerState.isLoading,
                                 positionMs = playerState.currentPositionMs,
                                 durationMs = playerState.durationMs,
                                 onPlayPause = viewModel::togglePlayPause,

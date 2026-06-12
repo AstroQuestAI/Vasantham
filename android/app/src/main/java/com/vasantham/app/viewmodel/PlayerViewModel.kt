@@ -13,10 +13,12 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.vasantham.app.audio.AudioMode
 import com.vasantham.app.audio.StemSeparationProcessor
 import com.vasantham.app.data.model.Track
+import com.vasantham.app.data.repository.JioSaavnRepository
 import com.vasantham.app.data.repository.MediaRepository
 import com.vasantham.app.data.sampleTracks
 import com.vasantham.app.service.MusicService
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,6 +29,7 @@ import javax.inject.Inject
 data class PlayerState(
     val currentTrack: Track? = null,
     val isPlaying: Boolean = false,
+    val isLoading: Boolean = false,
     val currentPositionMs: Long = 0L,
     val durationMs: Long = 0L,
     val queue: List<Track> = emptyList(),
@@ -42,12 +45,14 @@ class PlayerViewModel @Inject constructor(
     application: Application,
     private val repository: MediaRepository,
     private val stemProcessor: StemSeparationProcessor,
+    private val jioSaavnRepo: JioSaavnRepository,
 ) : AndroidViewModel(application) {
 
     private val _state = MutableStateFlow(PlayerState())
     val state: StateFlow<PlayerState> = _state.asStateFlow()
 
     private var controller: MediaController? = null
+    private var playJob: Job? = null
 
     private val positionJob = viewModelScope.launch {
         while (true) {
@@ -98,26 +103,40 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun play(track: Track, queue: List<Track> = listOf(track)) {
-        val c = controller ?: return
-        val items = queue.map { t ->
-            MediaItem.Builder()
-                .setMediaId(t.id)
-                .setUri(t.audioUrl ?: t.videoUrl ?: "")
-                .setMediaMetadata(
-                    MediaMetadata.Builder()
-                        .setTitle(t.title)
-                        .setArtist(t.artist)
-                        .setAlbumTitle(t.album)
-                        .setArtworkUri(t.coverUrl.toUri())
-                        .build()
-                )
-                .build()
+        playJob?.cancel()
+        // Show the track immediately so the mini-player appears while URL resolves.
+        _state.update { it.copy(currentTrack = track, isLoading = true) }
+        playJob = viewModelScope.launch {
+            // Resolve the selected track's real stream URL from JioSaavn / saavn.dev.
+            // Other queue items use their fallback SoundHelix URL until they're tapped.
+            val resolvedUrl = jioSaavnRepo.resolveUrl(track)
+            val c = controller ?: run {
+                _state.update { it.copy(isLoading = false) }
+                return@launch
+            }
+            val items = queue.map { t ->
+                val uri = if (t.id == track.id) resolvedUrl else (t.audioUrl ?: t.videoUrl ?: "")
+                MediaItem.Builder()
+                    .setMediaId(t.id)
+                    .setUri(uri)
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setTitle(t.title)
+                            .setArtist(t.artist)
+                            .setAlbumTitle(t.album)
+                            .setArtworkUri(t.coverUrl.toUri())
+                            .build()
+                    )
+                    .build()
+            }
+            val startIndex = queue.indexOfFirst { it.id == track.id }.coerceAtLeast(0)
+            c.setMediaItems(items, startIndex, 0L)
+            c.prepare()
+            c.play()
+            _state.update {
+                it.copy(isLoading = false, currentTrack = track, queue = queue, queueIndex = startIndex)
+            }
         }
-        val startIndex = queue.indexOfFirst { it.id == track.id }.coerceAtLeast(0)
-        c.setMediaItems(items, startIndex, 0L)
-        c.prepare()
-        c.play()
-        _state.update { it.copy(currentTrack = track, queue = queue, queueIndex = startIndex) }
     }
 
     fun togglePlayPause() {
@@ -171,6 +190,7 @@ class PlayerViewModel @Inject constructor(
 
     override fun onCleared() {
         positionJob.cancel()
+        playJob?.cancel()
         controller?.release()
         super.onCleared()
     }
