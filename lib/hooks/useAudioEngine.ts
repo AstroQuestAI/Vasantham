@@ -109,6 +109,10 @@ export function useAudioEngine() {
     const audio = new Audio();
     audio.crossOrigin = 'anonymous';
     audio.preload = 'metadata';
+    // Disable browser's built-in pitch correction so our playbackRate changes actually shift pitch
+    (audio as any).preservesPitch = false;
+    (audio as any).mozPreservesPitch = false;
+    (audio as any).webkitPreservesPitch = false;
     audioRef.current = audio;
 
     audio.addEventListener('timeupdate', () => setCurrentTime(audio.currentTime));
@@ -178,10 +182,15 @@ export function useAudioEngine() {
     gainRef.current.gain.value = isMuted ? 0 : volume;
   }, [volume, isMuted]);
 
-  // Playback rate (tempo)
+  // Playback rate: combines tempo and pitch shift.
+  // pitch shift in semitones → rate multiplier = 2^(n/12)
+  // Both are applied together so changing pitch also shifts tempo slightly,
+  // which is the browser-native trade-off without a full pitch-stretch library.
   useEffect(() => {
-    if (audioRef.current) audioRef.current.playbackRate = effects.tempo;
-  }, [effects.tempo]);
+    if (!audioRef.current) return;
+    const pitchRate = Math.pow(2, effects.pitch / 12);
+    audioRef.current.playbackRate = effects.tempo * pitchRate;
+  }, [effects.tempo, effects.pitch]);
 
   // Bass EQ
   useEffect(() => {
