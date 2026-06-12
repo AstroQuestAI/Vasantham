@@ -1,35 +1,76 @@
 'use client';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Music4, Info } from 'lucide-react';
+import { Music4, ArrowRight } from 'lucide-react';
 import { usePlayerStore } from '@/lib/store';
 import { ragas } from '@/lib/data/ragas';
-import { RagaInfoCard } from '@/components/player/RagaInfoCard';
 import { cn } from '@/lib/utils';
 
-const timeColors: Record<string, string> = {
-  Morning: 'border-amber-500/40 bg-amber-500/10 text-amber-400',
-  Evening: 'border-violet-500/40 bg-violet-500/10 text-violet-400',
-  Night: 'border-indigo-500/40 bg-indigo-500/10 text-indigo-400',
-  'Late night': 'border-blue-500/40 bg-blue-500/10 text-blue-400',
+// Western chromatic notes
+const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const NOTE_ALIASES: Record<string, string> = {
+  'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#',
+};
+
+function noteIndex(note: string): number {
+  const n = NOTE_ALIASES[note] ?? note;
+  return NOTES.indexOf(n);
+}
+
+// Raga root note presets (Sa = tonic of the raga as commonly performed)
+const RAGA_ROOTS: Record<string, string> = {
+  yaman: 'F', bhairavi: 'C', bhoopali: 'G', bageshri: 'A',
+  desh: 'C', malkauns: 'C', bhimpalasi: 'F', kafi: 'D',
+  kirwani: 'A', bilawal: 'C', khamaj: 'G', todi: 'D',
+  marwa: 'C#', puriya: 'D', shankarabharanam: 'C', hamsadhwani: 'C',
+  charukesi: 'C', natabhairavi: 'C', kalyani: 'F', abheri: 'C',
 };
 
 export function RagaChanger() {
   const { effects, updateEffect } = usePlayerStore();
-  const [selected, setSelected] = useState<typeof ragas[0] | null>(
-    ragas.find((r) => r.id === effects.selectedRaga) ?? null
-  );
+  const [sourceKey, setSourceKey] = useState<string>('C');
+  const [targetKey, setTargetKey] = useState<string | null>(null);
+  const [targetRaga, setTargetRaga] = useState<typeof ragas[0] | null>(null);
+  const [mode, setMode] = useState<'key' | 'raga'>('key');
 
-  const applyRaga = (raga: typeof ragas[0] | null) => {
-    setSelected(raga);
-    updateEffect('selectedRaga', raga?.id ?? null);
-    if (raga) {
-      // Approximate pitch shift: use average semitone offset of raga's scale
-      const avgShift = raga.semitones.reduce((a, b) => a + b, 0) / raga.semitones.length;
-      updateEffect('pitch', Math.round(avgShift * 0.5)); // subtle shift toward raga center
-    } else {
-      updateEffect('pitch', 0);
-    }
+  const currentShift = effects.pitch;
+
+  const applyTranspose = (fromKey: string, toKey: string) => {
+    const from = noteIndex(fromKey);
+    const to = noteIndex(toKey);
+    if (from === -1 || to === -1) return;
+    let shift = to - from;
+    // Keep within -6 to +6 for minimal transposition
+    if (shift > 6) shift -= 12;
+    if (shift < -6) shift += 12;
+    updateEffect('pitch', shift);
+  };
+
+  const handleTargetKey = (key: string) => {
+    setTargetKey(key);
+    setTargetRaga(null);
+    updateEffect('selectedRaga', null);
+    applyTranspose(sourceKey, key);
+  };
+
+  const handleTargetRaga = (raga: typeof ragas[0]) => {
+    const ragaRoot = RAGA_ROOTS[raga.id] ?? 'C';
+    setTargetRaga(raga);
+    setTargetKey(ragaRoot);
+    updateEffect('selectedRaga', raga.id);
+    applyTranspose(sourceKey, ragaRoot);
+  };
+
+  const handleSourceKey = (key: string) => {
+    setSourceKey(key);
+    if (targetKey) applyTranspose(key, targetKey);
+  };
+
+  const reset = () => {
+    setTargetKey(null);
+    setTargetRaga(null);
+    updateEffect('pitch', 0);
+    updateEffect('selectedRaga', null);
   };
 
   return (
@@ -40,65 +81,138 @@ export function RagaChanger() {
         </div>
         <div>
           <h3 className="font-display text-lg font-bold text-white">Raga Transposer</h3>
-          <p className="text-xs text-white/40">Shift the music to an Indian classical raga</p>
+          <p className="text-xs text-white/40">Shift the song to any key or raga</p>
         </div>
       </div>
 
-      {/* Info banner */}
-      <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 mb-5">
-        <Info className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
-        <p className="text-xs text-amber-300/80 leading-relaxed">
-          The raga transposer approximates the tonal centre of the selected raga by subtly shifting the pitch.
-          For deep raga experiences, try pairing with Indian classical tracks.
-        </p>
-      </div>
-
-      {/* Selected raga — use the rich card */}
-      {selected && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-5"
-        >
-          <div className="flex justify-end mb-2">
-            <button onClick={() => applyRaga(null)}
-              className="text-xs text-white/40 hover:text-white px-2 py-1 rounded-lg hover:bg-white/10 transition-colors">
-              Remove raga
-            </button>
-          </div>
-          <RagaInfoCard raga={selected} compact={false} />
-        </motion.div>
-      )}
-
-      {/* Raga grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        {ragas.map((raga) => {
-          const isSelected = selected?.id === raga.id;
-          const time = raga.timeOfDay?.split(' ')[0] || 'Evening';
-          const colorClass = timeColors[time] || timeColors.Evening;
-
-          return (
-            <motion.button
-              key={raga.id}
-              whileTap={{ scale: 0.96 }}
-              onClick={() => applyRaga(isSelected ? null : raga)}
+      {/* Source key */}
+      <div className="mb-5">
+        <p className="text-sm font-medium text-white/70 mb-2">Song is currently in</p>
+        <div className="flex flex-wrap gap-2">
+          {NOTES.map((n) => (
+            <button
+              key={n}
+              onClick={() => handleSourceKey(n)}
               className={cn(
-                'p-3 rounded-xl border text-left transition-all',
-                isSelected ? colorClass : 'glass border-white/10 hover:border-white/20'
+                'px-3 py-1.5 rounded-lg text-sm font-mono font-bold border transition-all',
+                sourceKey === n
+                  ? 'bg-amber-500/20 border-amber-500/60 text-amber-400'
+                  : 'glass border-white/10 text-white/50 hover:text-white hover:border-white/30'
               )}
             >
-              <p className={cn('text-sm font-bold', isSelected ? '' : 'text-white')}>{raga.name}</p>
-              {raga.carnaticName && raga.carnaticName !== raga.name && (
-                <p className="text-[10px] text-white/40 mt-0.5">{raga.carnaticName}</p>
-              )}
-              <p className="text-[10px] text-white/50 mt-1 truncate">{raga.mood.split(',')[0]}</p>
-              {raga.timeOfDay && (
-                <p className="text-[10px] text-white/30 mt-0.5">{raga.timeOfDay}</p>
-              )}
-            </motion.button>
-          );
-        })}
+              {n}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {/* Arrow + shift display */}
+      <div className="flex items-center gap-3 my-4 px-2">
+        <div className="flex-1 h-px bg-white/10" />
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-white/40 font-mono">{sourceKey}</span>
+          <ArrowRight className="w-4 h-4 text-amber-400" />
+          <span className={cn('font-mono font-bold', targetKey ? 'text-amber-400' : 'text-white/20')}>
+            {targetKey ?? '?'}
+          </span>
+          {currentShift !== 0 && (
+            <span className="text-xs text-white/40 font-mono">
+              ({currentShift > 0 ? '+' : ''}{currentShift}st)
+            </span>
+          )}
+        </div>
+        <div className="flex-1 h-px bg-white/10" />
+      </div>
+
+      {/* Mode toggle */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setMode('key')}
+          className={cn('flex-1 py-2 rounded-xl text-sm font-medium border transition-all',
+            mode === 'key' ? 'bg-amber-500/20 border-amber-500/40 text-amber-400' : 'glass border-white/10 text-white/40 hover:text-white'
+          )}
+        >
+          Western Key
+        </button>
+        <button
+          onClick={() => setMode('raga')}
+          className={cn('flex-1 py-2 rounded-xl text-sm font-medium border transition-all',
+            mode === 'raga' ? 'bg-amber-500/20 border-amber-500/40 text-amber-400' : 'glass border-white/10 text-white/40 hover:text-white'
+          )}
+        >
+          Indian Raga
+        </button>
+      </div>
+
+      {/* Target: Western keys */}
+      {mode === 'key' && (
+        <div>
+          <p className="text-sm font-medium text-white/70 mb-2">Transpose to</p>
+          <div className="flex flex-wrap gap-2">
+            {NOTES.map((n) => (
+              <button
+                key={n}
+                onClick={() => handleTargetKey(n)}
+                disabled={n === sourceKey}
+                className={cn(
+                  'px-3 py-1.5 rounded-lg text-sm font-mono font-bold border transition-all',
+                  targetKey === n && !targetRaga
+                    ? 'bg-amber-500/20 border-amber-500/60 text-amber-400'
+                    : n === sourceKey
+                    ? 'glass border-white/5 text-white/20 cursor-not-allowed'
+                    : 'glass border-white/10 text-white/50 hover:text-white hover:border-white/30'
+                )}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Target: Ragas */}
+      {mode === 'raga' && (
+        <div>
+          <p className="text-sm font-medium text-white/70 mb-2">Transpose to raga</p>
+          <div className="grid grid-cols-2 gap-2">
+            {ragas.map((raga) => {
+              const root = RAGA_ROOTS[raga.id] ?? 'C';
+              const isSelected = targetRaga?.id === raga.id;
+              return (
+                <motion.button
+                  key={raga.id}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={() => handleTargetRaga(raga)}
+                  className={cn(
+                    'p-3 rounded-xl border text-left transition-all',
+                    isSelected
+                      ? 'bg-amber-500/20 border-amber-500/50 text-amber-400'
+                      : 'glass border-white/10 hover:border-white/20'
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <p className={cn('text-sm font-bold', isSelected ? '' : 'text-white')}>{raga.name}</p>
+                    <span className="text-xs font-mono text-white/30">{root}</span>
+                  </div>
+                  <p className="text-[10px] text-white/40 mt-0.5">{raga.mood.split(',')[0]}</p>
+                  <p className="text-[10px] text-white/25 mt-0.5">{raga.arohana}</p>
+                </motion.button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Reset */}
+      {currentShift !== 0 && (
+        <motion.button
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          onClick={reset}
+          className="mt-4 w-full py-2 rounded-xl glass border border-white/10 text-sm text-white/40 hover:text-white hover:border-white/30 transition-all"
+        >
+          Reset to original key
+        </motion.button>
+      )}
     </div>
   );
 }
