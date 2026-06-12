@@ -24,6 +24,7 @@ on:
 
 env:
   JAVA_VERSION: '17'
+  GRADLE_VERSION: '8.7'
   GRADLE_OPTS: '-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true'
 
 jobs:
@@ -41,19 +42,11 @@ jobs:
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: 'temurin'
-          cache: gradle
 
-      - name: Set up Gradle
+      - name: Set up Gradle ${{ env.GRADLE_VERSION }}
         uses: gradle/actions/setup-gradle@v3
         with:
-          gradle-version: wrapper
-          build-scan-publish: false
-
-      - name: Make gradlew executable
-        run: chmod +x android/gradlew
-
-      - name: Validate Gradle wrapper
-        uses: gradle/actions/wrapper-validation@v3
+          gradle-version: ${{ env.GRADLE_VERSION }}
 
       - name: Cache Gradle dependencies
         uses: actions/cache@v4
@@ -61,14 +54,14 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-            android/.gradle
-          key: ${{ runner.os }}-gradle-${{ hashFiles('android/**/*.gradle*', 'android/**/libs.versions.toml') }}
+          key: ${{ runner.os }}-gradle-${{ env.GRADLE_VERSION }}-${{ hashFiles('android/**/*.gradle*', 'android/**/libs.versions.toml') }}
           restore-keys: |
+            ${{ runner.os }}-gradle-${{ env.GRADLE_VERSION }}-
             ${{ runner.os }}-gradle-
 
       - name: Build Debug APK
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        run: gradle assembleDebug --no-daemon --stacktrace
 
       - name: Get APK info
         id: apk_info
@@ -126,15 +119,11 @@ jobs:
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: 'temurin'
-          cache: gradle
 
-      - name: Set up Gradle
+      - name: Set up Gradle ${{ env.GRADLE_VERSION }}
         uses: gradle/actions/setup-gradle@v3
         with:
-          gradle-version: wrapper
-
-      - name: Make gradlew executable
-        run: chmod +x android/gradlew
+          gradle-version: ${{ env.GRADLE_VERSION }}
 
       - name: Cache Gradle dependencies
         uses: actions/cache@v4
@@ -142,9 +131,9 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-            android/.gradle
-          key: ${{ runner.os }}-gradle-${{ hashFiles('android/**/*.gradle*', 'android/**/libs.versions.toml') }}
+          key: ${{ runner.os }}-gradle-${{ env.GRADLE_VERSION }}-${{ hashFiles('android/**/*.gradle*', 'android/**/libs.versions.toml') }}
           restore-keys: |
+            ${{ runner.os }}-gradle-${{ env.GRADLE_VERSION }}-
             ${{ runner.os }}-gradle-
 
       - name: Decode keystore
@@ -163,14 +152,13 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew assembleRelease --no-daemon --stacktrace
+        run: gradle assembleRelease --no-daemon --stacktrace
 
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
           name: vasantham-release-${{ github.run_number }}
-          path: |
-            android/app/build/outputs/apk/release/*.apk
+          path: android/app/build/outputs/apk/release/*.apk
           retention-days: 90
           if-no-files-found: error
 
