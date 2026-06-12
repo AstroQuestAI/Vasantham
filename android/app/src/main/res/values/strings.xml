@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Vasantham</string>
+    <string name="music_service_name">Vasantham Player</string>
+    <string name="notification_channel_name">Vasantham Playback</string>
+    <string name="notification_channel_description">Controls for Vasantham music playback</string>
+</resources>
