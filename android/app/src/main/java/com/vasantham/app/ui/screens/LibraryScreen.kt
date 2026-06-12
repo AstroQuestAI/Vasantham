@@ -46,7 +46,7 @@ fun LibraryScreen(
             val matchesQuery = query.isBlank() ||
                 track.title.contains(query, ignoreCase = true) ||
                 track.artist.contains(query, ignoreCase = true) ||
-                track.album.contains(query, ignoreCase = true)
+                track.album?.contains(query, ignoreCase = true) == true
             val matchesGenre = selectedGenre == null || track.genre.contains(selectedGenre!!, ignoreCase = true)
             val matchesLang = selectedLanguage == null || track.language == selectedLanguage
             matchesQuery && matchesGenre && matchesLang

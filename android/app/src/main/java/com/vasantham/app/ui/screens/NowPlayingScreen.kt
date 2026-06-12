@@ -122,7 +122,7 @@ fun NowPlayingScreen(
                     Text("Now Playing", color = TextMuted, fontSize = 12.sp,
                         fontWeight = FontWeight.Medium)
                     Text(
-                        track.album,
+                        track.album.orEmpty(),
                         style = TextStyle(
                             brush = Brush.linearGradient(listOf(VioletLight, PinkLight))
                         ),

@@ -43,7 +43,7 @@ fun SearchScreen(
         else sampleTracks.filter { track ->
             track.title.contains(query, ignoreCase = true) ||
                 track.artist.contains(query, ignoreCase = true) ||
-                track.album.contains(query, ignoreCase = true) ||
+                track.album?.contains(query, ignoreCase = true) == true ||
                 track.genre.contains(query, ignoreCase = true) ||
                 (track.raga?.contains(query, ignoreCase = true) == true) ||
                 track.language.contains(query, ignoreCase = true)
