@@ -147,17 +147,19 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Decode keystore (if secret provided)
-        if: secrets.KEYSTORE_BASE64 != ''
+      - name: Decode keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/vasantham-release.jks
-          echo "KEYSTORE_FILE=vasantham-release.jks" >> $GITHUB_ENV
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > android/app/vasantham-release.jks
+            echo "SIGNING_KEYSTORE=vasantham-release.jks" >> $GITHUB_ENV
+          fi
 
       - name: Build Release APK
         working-directory: android
         env:
+          SIGNING_KEYSTORE: ${{ env.SIGNING_KEYSTORE }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
